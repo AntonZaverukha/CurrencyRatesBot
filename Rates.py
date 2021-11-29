@@ -23,7 +23,7 @@ cursor.execute("select database();")
 record = cursor.fetchone()
 print("You're connected to database: ", record)
 
-
+# Видалення даних з БД (щоб БД не збільшувалася після кожного запиту корстувача)
 def DeleteData():
     Delete_data = """truncate table RatesNBU """
     Delete_data_privat = """truncate table RatesPrivat """
