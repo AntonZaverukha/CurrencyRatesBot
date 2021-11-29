@@ -1,24 +1,15 @@
 import mysql.connector
-from mysql.connector import Error
 import requests
-from requests.exceptions import HTTPError
 from pprint import pprint
-from dill.source import getsource
 
-# if 1:
+# Парсинг json'ів
 response = requests.get('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json')
 json_obj = response.json()
 
 responsePrivat = requests.get('https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5')
 json_obj_privat = responsePrivat.json()
 
-# responseMono = requests.get('https://api.monobank.ua/bank/currency')
-# json_obj_mono = responseMono.json()
-
-# pprint(json_obj_mono)
-
-
-# try:
+# Підключення до бази даних
 connection = mysql.connector.connect(host='localhost',
                                      database='CurrencyRates',
                                      user='root',
@@ -40,8 +31,7 @@ def DeleteData():
     cursor.execute(Delete_data_privat)
     connection.commit()
 
-
-DeleteData()
+# Занесення інформації з банківських API у базу даних
 def NBUdata():
     for json_rate in json_obj:
         sql = "INSERT INTO RatesNBU (Number, Name ,Rate, CC, Date ) VALUES(%s, %s, %s, %s, %s);"
@@ -49,16 +39,16 @@ def NBUdata():
         cursor.execute(sql, values)
         connection.commit()
 
+
 def Privatdata():
     for json_rate_privat in json_obj_privat:
-        sql = "INSERT INTO RatesPrivat (CC, Rate) VALUES(%s, %s);"
-        values_privat = [json_rate_privat['ccy'], json_rate_privat['buy']]
+        sql = "INSERT INTO RatesPrivat (Base_CC, Buy, CC, Sale) VALUES(%s, %s, %s, %s);"
+        values_privat = [json_rate_privat['base_ccy'], json_rate_privat['buy'], json_rate_privat['ccy'],
+                         json_rate_privat['sale']]
         cursor.execute(sql, values_privat)
         connection.commit()
 
-NBUdata()
-Privatdata()
-
+# Запити назви та поточного курсу валют з бази даних
 def DBrequestNBU(ChooseCC):
     mydb = mysql.connector.connect(
         host='localhost',
@@ -101,34 +91,24 @@ def DBrequestPrivat(ChooseCC):
     mycursor = mydb.cursor()
 
     if ChooseCC == "USD":
-        mycursor.execute("SELECT CC, Rate FROM RatesPrivat where CC ='USD'")
+        mycursor.execute("SELECT CC, Buy FROM RatesPrivat where CC ='USD'")
         myresult = mycursor.fetchall()
         pprint(myresult)
     else:
         if ChooseCC == "EUR":
-            mycursor.execute("SELECT CC, Rate FROM RatesPrivat where CC ='EUR'")
+            mycursor.execute("SELECT CC, Buy FROM RatesPrivat where CC ='EUR'")
             myresult = mycursor.fetchall()
             pprint(myresult)
         else:
             if ChooseCC == "RUR":
-                mycursor.execute("SELECT CC, Rate FROM RatesPrivat where CC ='RUR'")
+                mycursor.execute("SELECT CC, Buy FROM RatesPrivat where CC ='RUR'")
                 myresult = mycursor.fetchall()
                 pprint(myresult)
             else:
                 if ChooseCC == "BTC":
-                    mycursor.execute("SELECT CC, Rate FROM RatesPrivat where CC ='BTC'")
+                    mycursor.execute("SELECT CC, Buy FROM RatesPrivat where CC ='BTC'")
                     myresult = mycursor.fetchall()
                     pprint(myresult)
 
-
-# DBrequestNBU("PLN")
-# DBrequestPrivat("EUR")
-
-
-# except Error as e:
-#     print("Error while connecting to MySQL", e)
-# finally:
-#     if connection.is_connected():
-#         cursor.close()
 # connection.close()
 #         print("MySQL connection is closed")
